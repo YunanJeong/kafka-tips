@@ -1,20 +1,20 @@
 # `compression.type`
 
-## Producer (Connect, Streams)
+## ProducerConfig (Connect, Streams)
 
-- Kafka producer 설정이기 때문에 producer 접두어는 종종 생략됨
+- producer 설정이기 때문에 producer 접두어는 종종 생략됨
 - producer.compression.type
 - compression.type
 
-## Consumer
+## ConsumerConfig
 
 - 압축관련 옵션이 없으며, Topic 내 압축된 내용은 알아서 해제하여 읽음
 
-## Topic, Broker Config
+## TopicConfig, BrokerConfig
 
 - default: `compression.type=producer`
   - 기본값으로 두고 Producer 측 설정에 따르는 것이 일반적임
-  - Producer 측 압축 연산부하는 있으나, 트워크 대역폭과 Broker 저장공간 측면에서 이득
+  - Producer 측 압축 연산부하는 있으나, 네트워크 대역폭과 Broker 저장공간 측면에서 이득
   - 하나의 Topic 내에서도 RecordBatch마다 압축방식이 다를 수 있음
 - Topic 또는 Broker 측에서 특정 압축방식 지정 시
   - Broker는 최종 압축방식을 자신의 설정에 맞춤
