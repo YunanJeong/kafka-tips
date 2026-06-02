@@ -31,3 +31,11 @@ kafka-dump-log.sh \
   --files /path/to/kafka-logs/<topic>-<partition>/<segment>.log \
   --print-data-log | tail -100
 ```
+
+## 권장 type
+
+- `snappy: 원본의 1/2, 데이터엔지니어링에서 가장 무난`
+- lz4: 원본의 1/3, snappy 대비 거의 비슷하며 Java 환경에서 근소하게 더 좋음. 호환성 측면에서 Kafka Client 및 유관 시스템이 모두 Java일 때만 사용
+- zstd: 원본의 1/5, gzip과 snappy의 절충
+- gzip: 원본의 1/10, 처리속도가 확연히 느려짐. 용량 최소화 필요시에만 사용
+
