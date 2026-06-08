@@ -154,12 +154,11 @@ kafka-reassign-partitions.sh \
 
 ```sh
 # 재할당 실행 (완료까지 꽤 시간 소요 필요)
-kafka-reassign-partitions.sh \
-  --bootstrap-server localhost:9092 \
+kafka-reassign-partitions.sh --bootstrap-server localhost:9092 \
   --reassignment-json-file reassignment.json \
   --execute
 
-# 재할당 실행(쓰로틀링 걸기, production 권장, 완료 후 쓰로틀링 해제 필수)
+# 재할당 실행(쓰로틀링 50MB/s 걸기, production 권장, 완료 후 쓰로틀링 해제 필수)
 kafka-reassign-partitions.sh --bootstrap-server localhost:9092 \
   --reassignment-json-file jdbc-only-migration.json \
   --throttle 52428800 \
@@ -174,8 +173,7 @@ kafka-reassign-partitions.sh --bootstrap-server localhost:9092 \
 ```sh
 # 진행상황 모니터링
 # 재할당이 완전히 끝난 후 이 명령어를 한번 더 쓰면 쓰로틀링이 해제된다.
-kafka-reassign-partitions.sh \
-  --bootstrap-server localhost:9092 \
+kafka-reassign-partitions.sh --bootstrap-server localhost:9092 \
   --reassignment-json-file consumer-offsets-replication.json \
   --verify
 ```
