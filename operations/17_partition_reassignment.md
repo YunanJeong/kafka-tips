@@ -91,6 +91,9 @@ kafka-reassign-partitions.sh \
 - broker 3대(0,1,2) 중 2대에 __consumer_offsets 토픽의 파티션을 고르게 분배하는 reassignment.json 설정 예시
   - **"기존 replica 위치한 곳은 그대로 두고"** 다른 곳에 replica를 추가하는게 안정적임
   - log_dirs는 최근 버전에 있는건데, 보통은 any이고 replica 수 만큼 기술하면 됨
+- 중요: `replicas` 나열 순서
+  - 파티션 재할당 계획 JSON에서 replicas 배열의 첫 번째 broker id는 해당 파티션의 preferred leader 로 간주됨
+  - replicas 순서가 특정 브로커에 편중되면, preferred leader가 한 브로커에 몰릴 수 있고 결과적으로 리더 부하가 불균형 가능성이 있음
 
 ```json
 {
@@ -176,4 +179,14 @@ kafka-reassign-partitions.sh --bootstrap-server localhost:9092 \
 kafka-reassign-partitions.sh --bootstrap-server localhost:9092 \
   --reassignment-json-file consumer-offsets-replication.json \
   --verify
+```
+
+### 6. 리더 재분배(필요시 사용)
+
+- 재할당 이후 실제 리더를 preferred leader 기준으로 다시 맞추려면 아래 명령어로 preferred leader election을 수행한다.
+
+```
+# 리더 재분배
+kafka-leader-election.sh --bootstrap-server kr-mum2-kafka:9092 \
+  --election-type preferred --all-topic-partitions
 ```
