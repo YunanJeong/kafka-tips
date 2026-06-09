@@ -190,3 +190,30 @@ kafka-reassign-partitions.sh --bootstrap-server localhost:9092 \
 kafka-leader-election.sh --bootstrap-server kr-mum2-kafka:9092 \
   --election-type preferred --all-topic-partitions
 ```
+
+### 여러 토픽에 대해 재할당 계획 Json 작성
+
+```sh
+# 예시
+# 전체 토픽 목록 중 "jdbc"키워드가 포함된 것들을 RF=3으로 변경 계획
+# [0,1,2], [1,2,0], [2,0,1] 순 번갈아 기술
+kafka-topics.sh --bootstrap-server localhost:9092 --describe | \
+awk '$1 == "Topic:" && $4 ~ /^[0-9]+$/ {print $2, $4}' | \
+grep "jdbc" | \
+jq -R -s -c '
+  split("\n") | del(.[-1]) | map(split(" ")) | . as $orig |
+  {
+    "version": 1,
+    "partitions": [
+      range(0; $orig | length) |
+      if . % 3 == 0 then
+        {"topic": $orig[.][0], "partition": $orig[.][1] | tonumber, "replicas": [0, 1, 2], "log_dirs": ["any", "any", "any"]}
+      elif . % 3 == 1 then
+        {"topic": $orig[.][0], "partition": $orig[.][1] | tonumber, "replicas": [1, 2, 0], "log_dirs": ["any", "any", "any"]}
+      else
+        {"topic": $orig[.][0], "partition": $orig[.][1] | tonumber, "replicas": [2, 0, 1], "log_dirs": ["any", "any", "any"]}
+      end
+    ]
+  }
+' > jdbc-only-migration-v2.json
+```
