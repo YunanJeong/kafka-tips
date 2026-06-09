@@ -187,7 +187,7 @@ kafka-reassign-partitions.sh --bootstrap-server localhost:9092 \
 
 ```
 # 리더 재분배
-kafka-leader-election.sh --bootstrap-server kr-mum2-kafka:9092 \
+kafka-leader-election.sh --bootstrap-server localhost:9092 \
   --election-type preferred --all-topic-partitions
 ```
 
