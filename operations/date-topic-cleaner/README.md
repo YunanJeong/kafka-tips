@@ -90,6 +90,27 @@ helm template date-topic-cleaner chart/ -f my-values.yaml | kubectl apply -f -
 
 종료코드: `0` 정상, `1` 실패, `2` 인자 오류
 
+## 1회 실행
+
+CronJob 이 깔려 있으면:
+
+```bash
+kubectl create job --from=cronjob/date-topic-cleaner dtc-once
+kubectl logs -f job/dtc-once
+```
+
+CronJob 없이:
+
+```bash
+kubectl run dtc-once --rm -it --restart=Never \
+  --image=<REGISTRY>/date-topic-cleaner:0.1.0 \
+  --override-type=strategic \
+  --overrides='{"spec":{"terminationGracePeriodSeconds":300}}' \
+  -- --target-months-ago 2 --broker <BROKER>:9092 --connect-url http://<CONNECT>:8083
+```
+
+grace period override 를 빼면 기본 30초라 Ctrl-C 시 커넥터 resume 중 SIGKILL 된다.
+
 ## 개발
 
 ```bash
