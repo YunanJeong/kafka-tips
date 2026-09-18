@@ -1,0 +1,6 @@
+apiVersion: v2
+name: date-topic-cleaner
+description: 오래된 날짜토픽(_YYYY_MM, _YYYY_MM_DD)을 월 단위로 삭제하는 CronJob
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

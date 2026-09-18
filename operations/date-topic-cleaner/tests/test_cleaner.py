@@ -48,38 +48,49 @@ class FakeConnect:
         return self.states[n] == want
 
 
-def test_run_deletes_expired_and_cycles_connector():
-    admin = FakeAdmin(['log_2020_01_01', 'log_2026_09_17', 'plain'])
+def test_run_deletes_whole_month_and_cycles_connector():
+    """monthly와 daily가 한 번의 stop 구간에서 함께 삭제된다."""
+    admin = FakeAdmin(['log_2026_07', 'log_2026_07_15',
+                       'log_2026_09_17', 'plain'])
     connect = FakeConnect({'sink': {'connector.class': S3,
                                     'topics.regex': 'log_.*'}})
-    rc = run(admin, connect, retention_days=60, today=TODAY)
+    rc = run(admin, connect, target_months_ago=2, today=TODAY)
     assert rc == 0
-    assert admin.deleted_calls == [['log_2020_01_01']]
+    assert admin.deleted_calls == [['log_2026_07', 'log_2026_07_15']]
     assert connect.events == [('stop', 'sink'), ('resume', 'sink')]
+
+
+def test_run_leaves_older_months_alone():
+    """대상 월만 지운다. 더 오래된 달은 건드리지 않는다."""
+    admin = FakeAdmin(['log_2026_05_01', 'log_2026_06', 'log_2026_07_15'])
+    connect = FakeConnect({'sink': {'connector.class': S3,
+                                    'topics.regex': 'log_.*'}})
+    assert run(admin, connect, target_months_ago=2, today=TODAY) == 0
+    assert admin.deleted_calls == [['log_2026_07_15']]
 
 
 def test_run_no_target_skips_connector_entirely():
     admin = FakeAdmin(['log_2026_09_17', 'plain'])
     connect = FakeConnect({'sink': {'connector.class': S3,
                                     'topics.regex': 'log_.*'}})
-    assert run(admin, connect, retention_days=60, today=TODAY) == 0
+    assert run(admin, connect, target_months_ago=2, today=TODAY) == 0
     assert admin.deleted_calls == []
     assert connect.events == []
 
 
 def test_run_returns_1_on_partial_failure_but_resumes():
-    admin = FakeAdmin(['log_2020_01_01', 'log_2020_01_02'],
-                      fail=['log_2020_01_02'])
+    admin = FakeAdmin(['log_2026_07_01', 'log_2026_07_02'],
+                      fail=['log_2026_07_02'])
     connect = FakeConnect({'sink': {'connector.class': S3,
                                     'topics.regex': 'log_.*'}})
-    assert run(admin, connect, retention_days=60, today=TODAY) == 1
+    assert run(admin, connect, target_months_ago=2, today=TODAY) == 1
     assert connect.states['sink'] == 'RUNNING'
 
 
 def test_run_no_related_connector_leaves_others_alone():
-    admin = FakeAdmin(['log_2020_01_01'])
+    admin = FakeAdmin(['log_2026_07_01'])
     connect = FakeConnect({'sink': {'connector.class': S3,
                                     'topics': 'unrelated'}})
-    assert run(admin, connect, retention_days=60, today=TODAY) == 0
-    assert admin.deleted_calls == [['log_2020_01_01']]
+    assert run(admin, connect, target_months_ago=2, today=TODAY) == 0
+    assert admin.deleted_calls == [['log_2026_07_01']]
     assert connect.events == []

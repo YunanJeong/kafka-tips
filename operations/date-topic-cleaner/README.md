@@ -1,11 +1,11 @@
 # date-topic-cleaner
 
-오래된 날짜토픽(`_YYYY_MM_DD`, `_YYYY_MM` 으로 끝나는 토픽)을 삭제하는 Kubernetes CronJob.
+지정한 달의 날짜토픽(`_YYYY_MM`, `_YYYY_MM_DD`)을 삭제하는 Kubernetes CronJob.
 
 ## 동작
 
 ```
-토픽 조회 -> 삭제대상 선별 -> 유관 s3 sink 커넥터 stop -> 토픽 삭제 -> 커넥터 resume
+토픽 조회 -> 대상 월 선별 -> 유관 s3 sink 커넥터 stop -> 토픽 삭제 -> 커넥터 resume
 ```
 
 커넥터를 stop 하는 이유는 삭제되는 토픽을 참조하던 s3 sink task가 timeout으로 fail 하는 것을 막기 위함이다. `pause`는 task가 살아있어 fetch를 계속 시도하므로 `stop`(Connect 3.5+, task를 완전히 해제)을 쓴다.
@@ -23,21 +23,71 @@ SIGTERM 후 resume 할 시간이 필요하므로 `terminationGracePeriodSeconds:
 
 ## 삭제대상 판정
 
-기준일이 `오늘 - retention-days` 보다 이전인 토픽. `mylog_2026_07_15` 는 기준일 2026-07-15,
-`mylog_2026_07` 은 **말일인 2026-07-31** 이다. (1일 기준이면 진행중인 달이 조기에 삭제된다)
+판정 단위는 **달**이다. `--target-months-ago 2` 를 2026-09 에 실행하면 대상은 **2026-07 하나**이고,
+`_2026_07` 과 `_2026_07_01` ~ `_2026_07_31` 이 한 번에 삭제된다. 6월 이하는 건드리지 않는다.
+
+월 단위로 묶으므로 한 달이 며칠씩 쪼개져 사라지거나, monthly 토픽이 자기 daily들보다
+오래 남는 일이 없다.
 
 `_` 로 시작하는 내부 토픽과 날짜 형식이 아닌 토픽은 제외된다.
 
+> 대상 월만 지우므로 그보다 오래된 잔여 토픽은 이 앱이 건드리지 않는다.
+> 최초 도입 시 과거 누적분은 별도로 정리해야 한다.
+
 ## 배포
 
+### Helm (권장)
+
 ```bash
-docker build -t date-topic-cleaner:0.1.0 .
-kubectl apply -f cronjob.yaml   # image, args, schedule 은 환경에 맞게 수정
+docker build -t <REGISTRY>/date-topic-cleaner:0.1.0 .
+
+# 패키징 (date-topic-cleaner-0.1.0.tgz)
+helm lint chart/
+helm package chart/
+
+helm upgrade --install date-topic-cleaner date-topic-cleaner-0.1.0.tgz \
+  --set image.repository=<REGISTRY>/date-topic-cleaner \
+  --set broker=<BROKER>:9092 \
+  --set connectUrl=http://<CONNECT>:8083
 ```
 
-인자: `--retention-days`(필수), `--broker`, `--connect-url`
+차트를 고쳤으면 `Chart.yaml` 의 `version` 을, 이미지를 새로 빌드했으면 `appVersion` 을 올린다.
+
+렌더링 결과만 보려면:
+
+```bash
+helm template date-topic-cleaner chart/ --set image.repository=<REGISTRY>/date-topic-cleaner
+```
+
+| values | 설명 | 기본값 |
+|--------|------|--------|
+| `targetMonthsAgo` | 몇 달 전 토픽을 삭제할지 (1 이상) | `2` |
+| `schedule` | cron 표현식 | `17 4 1 * *` (매월 1일) |
+| `timeZone` | 스케줄 타임존 | `Asia/Seoul` |
+| `broker` | bootstrap servers | `kafka:9092` |
+| `connectUrl` | Kafka Connect REST URL | `http://kafka-connect:8083` |
+| `image.tag` | 비우면 `Chart.appVersion` | `""` |
+
+### kubectl
+
+헬름 없이 띄울 때는 `cronjob.yaml` 샘플을 쓴다. `<REGISTRY>`, `<BROKER>`, `<CONNECT>` 를 채우고:
+
+```bash
+kubectl apply -f cronjob.yaml
+```
+
+차트에서 매니페스트를 뽑아 쓸 수도 있다:
+
+```bash
+helm template date-topic-cleaner chart/ \
+  --set image.repository=<REGISTRY>/date-topic-cleaner | kubectl apply -f -
+```
+
 종료코드: `0` 정상, `1` 실패, `2` 인자 오류
+
+## 개발
 
 ```bash
 uv run pytest
+uv run python -m date_topic_cleaner --target-months-ago 2 --broker localhost:9092
 ```

@@ -2,76 +2,85 @@
 
 from datetime import date
 
-from date_topic_cleaner.dates import parse_topic_date, select_expired
+from date_topic_cleaner.dates import (
+    parse_month_key, select_targets, target_month)
+
+TODAY = date(2026, 9, 18)
 
 
-def test_parse_daily():
-    assert parse_topic_date('mylog_2026_07_15') == (date(2026, 7, 15), 'daily')
-
-
-def test_parse_monthly_uses_last_day():
-    assert parse_topic_date('mylog_2026_07') == (date(2026, 7, 31), 'monthly')
-    assert parse_topic_date('mylog_2024_02') == (date(2024, 2, 29), 'monthly')
-    assert parse_topic_date('mylog_2026_02') == (date(2026, 2, 28), 'monthly')
-
-
-def test_parse_daily_wins_over_monthly():
-    """_2026_07_15 는 monthly 정규식에도 걸리지만 daily로 잡혀야 한다."""
-    assert parse_topic_date('a_2026_07_15')[1] == 'daily'
+def test_parse_daily_and_monthly_share_key():
+    """일단위와 월단위 토픽은 같은 달 키로 묶인다."""
+    assert parse_month_key('mylog_2026_07_15') == (2026, 7)
+    assert parse_month_key('mylog_2026_07') == (2026, 7)
 
 
 def test_parse_invalid():
-    assert parse_topic_date('mylog') is None
-    assert parse_topic_date('mylog_2026') is None
-    assert parse_topic_date('mylog_2026_13') is None      # 13월
-    assert parse_topic_date('mylog_2026_00') is None      # 0월
-    assert parse_topic_date('mylog_2026_02_30') is None   # 없는 날짜
-    assert parse_topic_date('mylog_2026_7_15') is None    # 0패딩 없음
-    assert parse_topic_date('2026_07_15') is None         # prefix 없음
-    assert parse_topic_date('mylog_2026_07_15_extra') is None
+    assert parse_month_key('mylog') is None
+    assert parse_month_key('mylog_2026') is None
+    assert parse_month_key('mylog_2026_13') is None      # 13월
+    assert parse_month_key('mylog_2026_00') is None      # 0월
+    assert parse_month_key('mylog_2026_02_30') is None   # 없는 날짜
+    assert parse_month_key('mylog_2026_7_15') is None    # 0패딩 없음
+    assert parse_month_key('2026_07_15') is None         # prefix 없음
+    assert parse_month_key('mylog_2026_07_15_extra') is None
 
 
-def test_select_expired_boundary():
-    """cutoff 당일은 남기고 그 이전만 삭제한다."""
-    today = date(2026, 9, 18)
+def test_target_month():
+    assert target_month(TODAY, 2) == (2026, 7)
+    assert target_month(TODAY, 1) == (2026, 8)
+
+
+def test_target_month_crosses_year():
+    assert target_month(date(2026, 1, 15), 1) == (2025, 12)
+    assert target_month(date(2026, 1, 15), 2) == (2025, 11)
+    assert target_month(date(2026, 2, 1), 14) == (2024, 12)
+
+
+def test_select_targets_takes_whole_month():
+    """대상 월의 monthly와 daily가 전부 함께 잡힌다."""
     topics = [
-        'a_2026_07_20',  # cutoff 당일 -> 보존
-        'a_2026_07_19',  # cutoff 이전 -> 삭제
-        'a_2026_07_21',  # 보존
+        'log_2026_07',
+        'log_2026_07_01',
+        'log_2026_07_31',
     ]
-    got = [t for t, _, _ in select_expired(topics, 60, today)]
-    assert got == ['a_2026_07_19']
+    targets, key = select_targets(topics, 2, TODAY)
+    assert key == (2026, 7)
+    assert targets == ['log_2026_07', 'log_2026_07_01', 'log_2026_07_31']
 
 
-def test_select_expired_monthly_current_month_kept():
-    """진행중인 달의 월단위 토픽은 말일 기준이라 삭제되지 않는다."""
-    today = date(2026, 9, 18)
-    got = [t for t, _, _ in select_expired(['a_2026_09', 'a_2026_06'], 60, today)]
-    assert got == ['a_2026_06']  # 2026-06-30 < 2026-07-20
+def test_select_targets_only_that_month():
+    """대상 월만 잡고 더 오래된 달은 건드리지 않는다."""
+    topics = [
+        'log_2026_06_30',   # 더 오래됨 -> 제외
+        'log_2026_06',      # 더 오래됨 -> 제외
+        'log_2026_07_15',   # 대상
+        'log_2026_08_01',   # 최근 -> 제외
+        'log_2026_09_18',   # 이번 달 -> 제외
+    ]
+    targets, _ = select_targets(topics, 2, TODAY)
+    assert targets == ['log_2026_07_15']
 
 
-def test_select_expired_skips_internal_and_non_date():
-    today = date(2026, 9, 18)
+def test_select_targets_skips_internal_and_non_date():
     topics = [
         '__consumer_offsets',
-        '_schemas_2020_01_01',
+        '_schemas_2026_07_01',
         'connect-offsets',
         'plain_topic',
-        'a_2020_01_01',
+        'log_2026_07_01',
     ]
-    got = [t for t, _, _ in select_expired(topics, 60, today)]
-    assert got == ['a_2020_01_01']
+    targets, _ = select_targets(topics, 2, TODAY)
+    assert targets == ['log_2026_07_01']
 
 
-def test_select_expired_sorted_by_date():
-    today = date(2026, 9, 18)
-    topics = ['a_2020_03_01', 'a_2020_01_01', 'a_2020_02_01']
-    got = [t for t, _, _ in select_expired(topics, 60, today)]
-    assert got == ['a_2020_01_01', 'a_2020_02_01', 'a_2020_03_01']
+def test_select_targets_empty_when_month_already_clean():
+    targets, key = select_targets(['log_2026_09_01'], 2, TODAY)
+    assert targets == []
+    assert key == (2026, 7)
 
 
-def test_select_expired_zero_retention_keeps_today():
-    today = date(2026, 9, 18)
-    topics = ['a_2026_09_18', 'a_2026_09_17']
-    got = [t for t, _, _ in select_expired(topics, 0, today)]
-    assert got == ['a_2026_09_17']
+def test_select_targets_multiple_prefixes():
+    """서로 다른 토픽 계열도 같은 달이면 함께 잡힌다."""
+    topics = ['a_2026_07_01', 'b_2026_07', 'c_2026_08_01']
+    targets, _ = select_targets(topics, 2, TODAY)
+    assert targets == ['a_2026_07_01', 'b_2026_07']

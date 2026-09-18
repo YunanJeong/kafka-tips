@@ -1,5 +1,6 @@
 """날짜토픽 삭제 실행 흐름.
 
+대상 월 하나를 통째로(_YYYY_MM 과 _YYYY_MM_DD 전부) 삭제한다.
 유관 s3 sink 커넥터를 stop -> 토픽 삭제 -> 커넥터 resume 순으로 진행한다.
 커넥터를 stop 하는 이유는, 삭제되는 토픽을 참조하던 sink task가
 metadata/fetch 요청에서 timeout을 맞고 fail 하는 것을 막기 위함이다.
@@ -13,7 +14,7 @@ from datetime import date
 import requests
 
 from .connect import find_related_connectors
-from .dates import select_expired
+from .dates import select_targets
 
 log = logging.getLogger(__name__)
 
@@ -120,14 +121,14 @@ def install_sigterm_handler():
     signal.signal(signal.SIGTERM, handler)
 
 
-def run(admin, connect_client, retention_days, today=None,
+def run(admin, connect_client, target_months_ago, today=None,
         connector_wait_timeout=120, delete_timeout=120.0):
     """날짜토픽 삭제를 수행.
 
     Args:
         - admin (TopicAdmin): 토픽 조회/삭제
         - connect_client (ConnectClient): 커넥터 제어
-        - retention_days (int): 보존일수
+        - target_months_ago (int): 몇 달 전 날짜토픽을 삭제할지
         - today (datetime.date): 기준일 (default: 오늘)
         - connector_wait_timeout (int): 커넥터 상태전이 대기 시간(초)
         - delete_timeout (float): 브로커측 삭제 완료 대기 시간(초)
@@ -139,16 +140,15 @@ def run(admin, connect_client, retention_days, today=None,
     all_topics = admin.list_topics()
     log.info('전체 토픽 %d개', len(all_topics))
 
-    expired = select_expired(all_topics, retention_days, today)
-    if not expired:
-        log.info('삭제대상 없음 (기준일수 %d일)', retention_days)
+    targets, (year, month) = select_targets(
+        all_topics, target_months_ago, today)
+    if not targets:
+        log.info('삭제대상 없음 (대상월 %04d-%02d)', year, month)
         return 0
 
-    log.info('삭제대상 %d개 (기준일수 %d일)', len(expired), retention_days)
-    for topic, topic_date, kind in expired:
-        log.info('  %s (%s, %s)', topic, topic_date.isoformat(), kind)
-
-    targets = [t for t, _, _ in expired]
+    log.info('삭제대상 %d개 (대상월 %04d-%02d)', len(targets), year, month)
+    for topic in targets:
+        log.info('  %s', topic)
 
     configs = connect_client.list_connectors_expanded()
     related = find_related_connectors(configs, targets)

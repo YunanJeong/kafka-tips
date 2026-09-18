@@ -1,10 +1,14 @@
+# helm 없이 kubectl 로 바로 띄울 때 쓰는 샘플.
+# <REGISTRY>, <BROKER>, <CONNECT> 를 채워서 kubectl apply -f cronjob.yaml
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: date-topic-cleaner
+  labels:
+    app.kubernetes.io/name: date-topic-cleaner
 spec:
-  # 매일 04:17
-  schedule: "17 4 * * *"
+  # 매월 1일 04:17
+  schedule: "17 4 1 * *"
   timeZone: Asia/Seoul
   # 커넥터를 stop한 상태로 삭제하므로 동시 실행을 막는다
   concurrencyPolicy: Forbid
@@ -14,6 +18,9 @@ spec:
     spec:
       backoffLimit: 0
       template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: date-topic-cleaner
         spec:
           restartPolicy: Never
           # SIGTERM 수신 후 커넥터를 resume 할 시간을 준다.
@@ -21,14 +28,15 @@ spec:
           terminationGracePeriodSeconds: 300
           containers:
             - name: date-topic-cleaner
-              image: date-topic-cleaner:0.1.0
+              image: <REGISTRY>/date-topic-cleaner:0.1.0
+              imagePullPolicy: IfNotPresent
               args:
-                - --retention-days
-                - "60"
+                - --target-months-ago
+                - "2"
                 - --broker
-                - kafka:9092
+                - <BROKER>:9092
                 - --connect-url
-                - http://kafka-connect:8083
+                - http://<CONNECT>:8083
               resources:
                 requests:
                   cpu: 50m
