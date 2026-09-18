@@ -15,7 +15,7 @@ def build_parser():
         description='지정한 달의 날짜토픽(_YYYY_MM, _YYYY_MM_DD)을 삭제한다.')
     p.add_argument(
         '--target-months-ago', type=int, required=True,
-        help='몇 달 전의 날짜토픽을 삭제할지. 2026-09 에 2를 주면 2026-07 의 '
+        help='몇 달 전의 날짜토픽을 삭제할지. 2026-09-25 에 2를 주면 2026-07 의 '
              '_2026_07 과 _2026_07_DD 를 전부 삭제한다. 그보다 오래된 달은 '
              '건드리지 않는다.')
     p.add_argument(

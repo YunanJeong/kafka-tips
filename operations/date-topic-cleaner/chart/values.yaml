@@ -4,11 +4,11 @@ image:
   tag: ""
   pullPolicy: IfNotPresent
 
-# 매월 1일 04:17
-schedule: "17 4 1 * *"
+# 매월 25일 04:17
+schedule: "17 4 25 * *"
 timeZone: Asia/Seoul
 
-# 몇 달 전 날짜토픽을 삭제할지. 2 이면 9월 실행시 2026-07 전체가 대상.
+# 몇 달 전 날짜토픽을 삭제할지. 2 이면 2026-09-25 실행시 2026-07 전체가 대상.
 targetMonthsAgo: 2
 
 broker: kafka:9092

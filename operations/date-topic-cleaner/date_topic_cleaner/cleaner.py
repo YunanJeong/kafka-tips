@@ -21,6 +21,11 @@ log = logging.getLogger(__name__)
 
 RESUME_ATTEMPTS = 3
 RESUME_RETRY_INTERVAL = 5.0
+# 커넥터 상태전이 대기(초). 늘릴 거면 CronJob 의
+# terminationGracePeriodSeconds 도 같이 늘려야 한다.
+CONNECTOR_WAIT_TIMEOUT = 120
+# 브로커측 삭제 완료 대기(초)
+DELETE_TIMEOUT = 120.0
 
 
 class ConnectorStopTimeout(Exception):
@@ -45,7 +50,7 @@ class ConnectorGuard:
           건드리지 않는다.
     """
 
-    def __init__(self, client, names, wait_timeout=120):
+    def __init__(self, client, names, wait_timeout=CONNECTOR_WAIT_TIMEOUT):
         self.client = client
         self.names = names
         self.wait_timeout = wait_timeout
@@ -121,8 +126,7 @@ def install_sigterm_handler():
     signal.signal(signal.SIGTERM, handler)
 
 
-def run(admin, connect_client, target_months_ago, today=None,
-        connector_wait_timeout=120, delete_timeout=120.0):
+def run(admin, connect_client, target_months_ago, today=None):
     """날짜토픽 삭제를 수행.
 
     Args:
@@ -130,8 +134,6 @@ def run(admin, connect_client, target_months_ago, today=None,
         - connect_client (ConnectClient): 커넥터 제어
         - target_months_ago (int): 몇 달 전 날짜토픽을 삭제할지
         - today (datetime.date): 기준일 (default: 오늘)
-        - connector_wait_timeout (int): 커넥터 상태전이 대기 시간(초)
-        - delete_timeout (float): 브로커측 삭제 완료 대기 시간(초)
 
     Returns:
         int: 종료코드. 0=정상, 1=일부 실패
@@ -154,9 +156,9 @@ def run(admin, connect_client, target_months_ago, today=None,
     related = find_related_connectors(configs, targets)
     log.info('유관 커넥터 %d개: %s', len(related), related or '-')
 
-    guard = ConnectorGuard(connect_client, related, connector_wait_timeout)
+    guard = ConnectorGuard(connect_client, related)
     with guard:
-        deleted, failed = admin.delete_topics(targets, delete_timeout)
+        deleted, failed = admin.delete_topics(targets, DELETE_TIMEOUT)
 
     for topic in deleted:
         log.info('삭제 완료: %s', topic)

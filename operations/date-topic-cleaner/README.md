@@ -23,8 +23,9 @@ SIGTERM 후 resume 할 시간이 필요하므로 `terminationGracePeriodSeconds:
 
 ## 삭제대상 판정
 
-판정 단위는 **달**이다. `--target-months-ago 2` 를 2026-09 에 실행하면 대상은 **2026-07 하나**이고,
-`_2026_07` 과 `_2026_07_01` ~ `_2026_07_31` 이 한 번에 삭제된다. 6월 이하는 건드리지 않는다.
+판정 단위는 **달**이다. `--target-months-ago 2` 를 2026-09-25 에 실행하면 대상은
+**2026-07 하나**이고, `_2026_07` 과 `_2026_07_01` ~ `_2026_07_31` 이 한 번에 삭제된다.
+6월 이하는 건드리지 않는다.
 
 월 단위로 묶으므로 한 달이 며칠씩 쪼개져 사라지거나, monthly 토픽이 자기 daily들보다
 오래 남는 일이 없다.
@@ -41,9 +42,8 @@ SIGTERM 후 resume 할 시간이 필요하므로 `terminationGracePeriodSeconds:
 ```bash
 docker build -t <REGISTRY>/date-topic-cleaner:0.1.0 .
 
-# 패키징 (date-topic-cleaner-0.1.0.tgz)
 helm lint chart/
-helm package chart/
+helm package chart/          # date-topic-cleaner-0.1.0.tgz
 
 helm upgrade --install date-topic-cleaner date-topic-cleaner-0.1.0.tgz \
   --set image.repository=<REGISTRY>/date-topic-cleaner \
@@ -51,18 +51,10 @@ helm upgrade --install date-topic-cleaner date-topic-cleaner-0.1.0.tgz \
   --set connectUrl=http://<CONNECT>:8083
 ```
 
-차트를 고쳤으면 `Chart.yaml` 의 `version` 을, 이미지를 새로 빌드했으면 `appVersion` 을 올린다.
-
-렌더링 결과만 보려면:
-
-```bash
-helm template date-topic-cleaner chart/ --set image.repository=<REGISTRY>/date-topic-cleaner
-```
-
 | values | 설명 | 기본값 |
 |--------|------|--------|
 | `targetMonthsAgo` | 몇 달 전 토픽을 삭제할지 (1 이상) | `2` |
-| `schedule` | cron 표현식 | `17 4 1 * *` (매월 1일) |
+| `schedule` | cron 표현식 | `17 4 25 * *` (매월 25일) |
 | `timeZone` | 스케줄 타임존 | `Asia/Seoul` |
 | `broker` | bootstrap servers | `kafka:9092` |
 | `connectUrl` | Kafka Connect REST URL | `http://kafka-connect:8083` |
@@ -70,13 +62,8 @@ helm template date-topic-cleaner chart/ --set image.repository=<REGISTRY>/date-t
 
 ### kubectl
 
-헬름 없이 띄울 때는 `cronjob.yaml` 샘플을 쓴다. `<REGISTRY>`, `<BROKER>`, `<CONNECT>` 를 채우고:
-
-```bash
-kubectl apply -f cronjob.yaml
-```
-
-차트에서 매니페스트를 뽑아 쓸 수도 있다:
+헬름 없이 띄울 때는 `cronjob.yaml` 샘플에 `<REGISTRY>`, `<BROKER>`, `<CONNECT>` 를 채워
+`kubectl apply -f cronjob.yaml`. 차트에서 뽑아 쓸 수도 있다:
 
 ```bash
 helm template date-topic-cleaner chart/ \

@@ -7,8 +7,8 @@ metadata:
   labels:
     app.kubernetes.io/name: date-topic-cleaner
 spec:
-  # 매월 1일 04:17
-  schedule: "17 4 1 * *"
+  # 매월 25일 04:17
+  schedule: "17 4 25 * *"
   timeZone: Asia/Seoul
   # 커넥터를 stop한 상태로 삭제하므로 동시 실행을 막는다
   concurrencyPolicy: Forbid

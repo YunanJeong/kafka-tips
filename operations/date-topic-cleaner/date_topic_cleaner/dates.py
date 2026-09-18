@@ -23,8 +23,6 @@ def parse_month_key(topic):
         (int, int) 또는 None. 날짜토픽이 아니면 None.
 
     Note:
-        - _YYYY_MM_DD 를 먼저 검사한다. `a_2026_07_15` 는 MONTHLY_RE 에도
-          걸리지만(y=2026_07 불가하므로 실제로는 y=0715 형태로 오독) 순서로 막는다.
         - 일단위든 월단위든 같은 달이면 같은 키를 반환한다.
           `a_2026_07` 과 `a_2026_07_15` 는 둘 다 (2026, 7).
     """
@@ -58,7 +56,7 @@ def target_month(today, months_ago):
         (int, int): (년, 월)
 
     Note:
-        - 2026-09-18 기준 months_ago=2 이면 (2026, 7).
+        - 2026-09-25 기준 months_ago=2 이면 (2026, 7).
     """
     total = today.year * 12 + (today.month - 1) - months_ago
     y, m = divmod(total, 12)

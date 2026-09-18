@@ -117,7 +117,7 @@ def test_guard_resumes_when_stop_fails_midway():
     assert ('resume', 'sink-a') in c.calls
 
 
-def test_guard_resumes_on_sigterm(monkeypatch):
+def test_guard_resumes_on_sigterm():
     """SIGTERM(SystemExit)으로 빠져나가도 커넥터를 되살린다.
 
     SystemExit은 Exception이 아니라 BaseException이라 except Exception

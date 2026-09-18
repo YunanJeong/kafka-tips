@@ -5,7 +5,7 @@ from datetime import date
 from date_topic_cleaner.cleaner import run
 
 S3 = 'io.confluent.connect.s3.S3SinkConnector'
-TODAY = date(2026, 9, 18)
+TODAY = date(2026, 9, 25)
 
 
 class FakeAdmin:
@@ -51,7 +51,7 @@ class FakeConnect:
 def test_run_deletes_whole_month_and_cycles_connector():
     """monthly와 daily가 한 번의 stop 구간에서 함께 삭제된다."""
     admin = FakeAdmin(['log_2026_07', 'log_2026_07_15',
-                       'log_2026_09_17', 'plain'])
+                       'log_2026_09_25', 'plain'])
     connect = FakeConnect({'sink': {'connector.class': S3,
                                     'topics.regex': 'log_.*'}})
     rc = run(admin, connect, target_months_ago=2, today=TODAY)
@@ -70,7 +70,7 @@ def test_run_leaves_older_months_alone():
 
 
 def test_run_no_target_skips_connector_entirely():
-    admin = FakeAdmin(['log_2026_09_17', 'plain'])
+    admin = FakeAdmin(['log_2026_09_25', 'plain'])
     connect = FakeConnect({'sink': {'connector.class': S3,
                                     'topics.regex': 'log_.*'}})
     assert run(admin, connect, target_months_ago=2, today=TODAY) == 0

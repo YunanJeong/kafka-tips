@@ -5,7 +5,7 @@ from datetime import date
 from date_topic_cleaner.dates import (
     parse_month_key, select_targets, target_month)
 
-TODAY = date(2026, 9, 18)
+TODAY = date(2026, 9, 25)
 
 
 def test_parse_daily_and_monthly_share_key():
@@ -31,9 +31,9 @@ def test_target_month():
 
 
 def test_target_month_crosses_year():
-    assert target_month(date(2026, 1, 15), 1) == (2025, 12)
-    assert target_month(date(2026, 1, 15), 2) == (2025, 11)
-    assert target_month(date(2026, 2, 1), 14) == (2024, 12)
+    assert target_month(date(2026, 1, 25), 1) == (2025, 12)
+    assert target_month(date(2026, 1, 25), 2) == (2025, 11)
+    assert target_month(date(2026, 2, 25), 14) == (2024, 12)
 
 
 def test_select_targets_takes_whole_month():
@@ -55,7 +55,7 @@ def test_select_targets_only_that_month():
         'log_2026_06',      # 더 오래됨 -> 제외
         'log_2026_07_15',   # 대상
         'log_2026_08_01',   # 최근 -> 제외
-        'log_2026_09_18',   # 이번 달 -> 제외
+        'log_2026_09_25',   # 이번 달 -> 제외
     ]
     targets, _ = select_targets(topics, 2, TODAY)
     assert targets == ['log_2026_07_15']
@@ -74,7 +74,7 @@ def test_select_targets_skips_internal_and_non_date():
 
 
 def test_select_targets_empty_when_month_already_clean():
-    targets, key = select_targets(['log_2026_09_01'], 2, TODAY)
+    targets, key = select_targets(['log_2026_09_25'], 2, TODAY)
     assert targets == []
     assert key == (2026, 7)
 
