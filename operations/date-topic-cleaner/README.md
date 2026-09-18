@@ -2,6 +2,21 @@
 
 지정한 달의 날짜토픽(`_YYYY_MM`, `_YYYY_MM_DD`)을 삭제하는 Kubernetes CronJob.
 
+```
+date-topic-cleaner/
+├── date_topic_cleaner/     앱
+│   ├── __main__.py         CLI 엔트리포인트
+│   ├── cleaner.py          실행 흐름 + ConnectorGuard(stop/resume)
+│   ├── connect.py          Kafka Connect REST, 유관 커넥터 탐색
+│   ├── dates.py            날짜토픽 파싱 및 대상 월 판정
+│   └── kafka_admin.py      토픽 조회/삭제
+├── tests/                  유닛테스트
+├── chart/                  Helm 차트 (배포 기본)
+├── cronjob.yaml            헬름 없이 쓰는 kubectl 샘플
+├── Dockerfile
+└── pyproject.toml / uv.lock
+```
+
 ## 동작
 
 ```
@@ -43,7 +58,7 @@ SIGTERM 후 resume 할 시간이 필요하므로 `terminationGracePeriodSeconds:
 docker build -t <REGISTRY>/date-topic-cleaner:0.1.0 .
 
 helm lint chart/
-helm package chart/          # date-topic-cleaner-0.1.0.tgz
+helm package chart/            # date-topic-cleaner-0.1.0.tgz
 
 helm upgrade --install date-topic-cleaner date-topic-cleaner-0.1.0.tgz \
   --set image.repository=<REGISTRY>/date-topic-cleaner \
