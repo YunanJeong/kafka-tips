@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from date_topic_cleaner.dates import (
+from app.dates import (
     parse_month_key, select_targets, target_month)
 
 TODAY = date(2026, 9, 25)

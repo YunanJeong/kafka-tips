@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from date_topic_cleaner.cleaner import run
+from app.cleaner import run
 
 S3 = 'io.confluent.connect.s3.S3SinkConnector'
 TODAY = date(2026, 9, 25)

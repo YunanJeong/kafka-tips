@@ -3,9 +3,9 @@
 import pytest
 import requests
 
-from date_topic_cleaner import cleaner
-from date_topic_cleaner.cleaner import ConnectorGuard, ConnectorStopTimeout
-from date_topic_cleaner.connect import find_related_connectors
+from app import cleaner
+from app.cleaner import ConnectorGuard, ConnectorStopTimeout
+from app.connect import find_related_connectors
 
 S3 = 'io.confluent.connect.s3.S3SinkConnector'
 JDBC = 'io.confluent.connect.jdbc.JdbcSourceConnector'

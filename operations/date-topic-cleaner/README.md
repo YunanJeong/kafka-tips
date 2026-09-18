@@ -4,17 +4,19 @@
 
 ```
 date-topic-cleaner/
-├── date_topic_cleaner/     앱
-│   ├── __main__.py         CLI 엔트리포인트
-│   ├── cleaner.py          실행 흐름 + ConnectorGuard(stop/resume)
-│   ├── connect.py          Kafka Connect REST, 유관 커넥터 탐색
-│   ├── dates.py            날짜토픽 파싱 및 대상 월 판정
-│   └── kafka_admin.py      토픽 조회/삭제
-├── tests/                  유닛테스트
-├── chart/                  Helm 차트 (배포 기본)
-├── cronjob.yaml            헬름 없이 쓰는 kubectl 샘플
-├── Dockerfile
-└── pyproject.toml / uv.lock
+├── image/                      이미지 빌드 재료
+│   ├── Dockerfile
+│   ├── app/                    앱
+│   │   ├── __main__.py         CLI 엔트리포인트
+│   │   ├── cleaner.py          실행 흐름 + ConnectorGuard(stop/resume)
+│   │   ├── connect.py          Kafka Connect REST, 유관 커넥터 탐색
+│   │   ├── dates.py            날짜토픽 파싱 및 대상 월 판정
+│   │   └── kafka_admin.py      토픽 조회/삭제
+│   ├── tests/                  유닛테스트
+│   └── pyproject.toml / uv.lock
+├── chart/                      Helm 차트 (배포 기본)
+├── my-values.yaml              배포시 채우는 환경값
+└── cronjob.yaml                헬름 없이 쓰는 kubectl 샘플
 ```
 
 ## 동작
@@ -54,16 +56,13 @@ SIGTERM 후 resume 할 시간이 필요하므로 `terminationGracePeriodSeconds:
 
 ### Helm (권장)
 
+`my-values.yaml` 에 환경값을 채우고:
+
 ```bash
-docker build -t <REGISTRY>/date-topic-cleaner:0.1.0 .
-
+docker build -t <REGISTRY>/date-topic-cleaner:0.1.0 image/
 helm lint chart/
-helm package chart/            # date-topic-cleaner-0.1.0.tgz
-
-helm upgrade --install date-topic-cleaner date-topic-cleaner-0.1.0.tgz \
-  --set image.repository=<REGISTRY>/date-topic-cleaner \
-  --set broker=<BROKER>:9092 \
-  --set connectUrl=http://<CONNECT>:8083
+helm package chart/
+helm upgrade --install date-topic-cleaner date-topic-cleaner-0.1.0.tgz -f my-values.yaml
 ```
 
 | values | 설명 | 기본값 |
@@ -77,12 +76,16 @@ helm upgrade --install date-topic-cleaner date-topic-cleaner-0.1.0.tgz \
 
 ### kubectl
 
-헬름 없이 띄울 때는 `cronjob.yaml` 샘플에 `<REGISTRY>`, `<BROKER>`, `<CONNECT>` 를 채워
-`kubectl apply -f cronjob.yaml`. 차트에서 뽑아 쓸 수도 있다:
+헬름 없이 띄울 때는 `cronjob.yaml` 샘플에 `<REGISTRY>`, `<BROKER>`, `<CONNECT>` 를 채운다.
 
 ```bash
-helm template date-topic-cleaner chart/ \
-  --set image.repository=<REGISTRY>/date-topic-cleaner | kubectl apply -f -
+kubectl apply -f cronjob.yaml
+```
+
+차트에서 매니페스트를 뽑아 쓸 수도 있다.
+
+```bash
+helm template date-topic-cleaner chart/ -f my-values.yaml | kubectl apply -f -
 ```
 
 종료코드: `0` 정상, `1` 실패, `2` 인자 오류
@@ -90,6 +93,7 @@ helm template date-topic-cleaner chart/ \
 ## 개발
 
 ```bash
+cd image/
 uv run pytest
-uv run python -m date_topic_cleaner --target-months-ago 2 --broker localhost:9092
+uv run python -m app --target-months-ago 2 --broker localhost:9092
 ```

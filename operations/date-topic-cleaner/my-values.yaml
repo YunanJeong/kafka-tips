@@ -1,0 +1,7 @@
+# helm upgrade --install date-topic-cleaner date-topic-cleaner-0.1.0.tgz -f my-values.yaml
+# 나머지 값은 chart/values.yaml 기본값을 쓴다.
+image:
+  repository: <REGISTRY>/date-topic-cleaner
+
+broker: <BROKER>:9092
+connectUrl: http://<CONNECT>:8083
