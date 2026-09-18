@@ -95,14 +95,14 @@ helm template date-topic-cleaner chart/ -f my-values.yaml | kubectl apply -f -
 CronJob 이 깔려 있으면:
 
 ```bash
-kubectl create job --from=cronjob/date-topic-cleaner dtc-once
-kubectl logs -f job/dtc-once
+kubectl create job -n default --from=cronjob/date-topic-cleaner dtc-once
+kubectl logs -n default -f job/dtc-once
 ```
 
 CronJob 없이:
 
 ```bash
-kubectl run dtc-once --rm -it --restart=Never \
+kubectl run dtc-once -n default --rm -it --restart=Never \
   --image=<REGISTRY>/date-topic-cleaner:0.1.0 \
   --override-type=strategic \
   --overrides='{"spec":{"terminationGracePeriodSeconds":300}}' \
