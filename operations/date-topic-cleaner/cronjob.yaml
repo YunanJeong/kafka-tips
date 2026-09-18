@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: date-topic-cleaner
+spec:
+  # 매일 04:17
+  schedule: "17 4 * * *"
+  timeZone: Asia/Seoul
+  # 커넥터를 stop한 상태로 삭제하므로 동시 실행을 막는다
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          # SIGTERM 수신 후 커넥터를 resume 할 시간을 준다.
+          # 짧으면 SIGKILL 되어 커넥터가 STOPPED로 방치된다.
+          terminationGracePeriodSeconds: 300
+          containers:
+            - name: date-topic-cleaner
+              image: date-topic-cleaner:0.1.0
+              args:
+                - --retention-days
+                - "60"
+                - --broker
+                - kafka:9092
+                - --connect-url
+                - http://kafka-connect:8083
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
