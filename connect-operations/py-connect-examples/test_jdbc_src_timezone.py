@@ -67,7 +67,7 @@ body = {
       "poll.interval.ms": 60000,  # default: 60000ms (1분)
       "batch.max.rows": 2000,    # default: 100개
 
-      "transaction.isolation.ms": "READ_UNCOMMITED",  # sql server default: READ_COMMITED
+      "transaction.isolation.mode": "READ_UNCOMMITED",  # sql server default: READ_COMMITED
   }
 }
 
